@@ -10,3 +10,4 @@ tokio = { version = "1", features = ["macros","fs","net","io-util"] }
 anyhow = "1.0"
 thiserror = "1.0"
 async-trait = "0.1.74"
+nom = "6"

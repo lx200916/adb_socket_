@@ -3,6 +3,7 @@ use anyhow::Ok;
 
 mod commands;
 mod transport;
+mod result;
 #[derive(thiserror::Error, Debug)]
 pub enum AdbTransportError {
     #[error("IO Error")]
@@ -11,6 +12,8 @@ pub enum AdbTransportError {
     AdbError(String),
     #[error("Invalid Response")]
     InvalidResponse,
+    #[error("Response Conversion Error: {0}")]
+    ConversionError(String),
 }
 pub enum AdbCommand {
     Version,
@@ -20,7 +23,6 @@ pub enum AdbCommand {
     Sync,
     TransportAny,
     TransportSerial(String),
-    HostFeatures,
     TrackDevices,
 }
 
@@ -34,7 +36,6 @@ impl ToString for AdbCommand {
             AdbCommand::Sync => String::from("sync:"),
             AdbCommand::TransportAny => String::from("host:transport-any"),
             AdbCommand::TransportSerial(serial) => format!("host:transport:{}", serial),
-            AdbCommand::HostFeatures => String::from("host:features"),
             AdbCommand::TrackDevices => String::from("host:track-devices"),
         }
     }
@@ -98,4 +99,5 @@ impl From<[u8;4]> for AdbRespStatus {
 }
 struct AdbTransports {
     transports: Box<dyn AdbTransport>,
+    json: bool,
 }

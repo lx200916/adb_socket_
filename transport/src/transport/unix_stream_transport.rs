@@ -31,6 +31,18 @@ impl AdbTransport for UnixStreamTransport {
         self.stream.write_all(command.to_string().as_bytes()).await?;
         Ok(())
     }
+        async fn get_length(&mut self) -> Result<usize> {
+        let mut length = [0u8; 4];
+        self.stream.read_exact(&mut length).await?;
+        let length = std::str::from_utf8(&length)?;
+        let length = usize::from_str_radix(length, 16)?;
+        Ok(length)
+    }
+    async fn read_exact(&mut self, length: usize) -> Result<Vec<u8>> {
+        let mut message = vec![0u8; length];
+        self.stream.read_exact(&mut message).await?;
+        Ok(message)
+    }
 }
 impl UnixStreamTransport {
     pub async fn new(addr: String) -> Result<Self> {
@@ -61,12 +73,6 @@ impl UnixStreamTransport {
 
         Ok(())
     }
-    async fn get_length(&mut self) -> Result<usize> {
-        let mut length = [0u8; 4];
-        self.stream.read_exact(&mut length).await?;
-        let length = std::str::from_utf8(&length)?;
-        let length = usize::from_str_radix(length, 16)?;
-        Ok(length)
-    }
+
 
 }
