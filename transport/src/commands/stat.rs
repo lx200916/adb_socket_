@@ -18,7 +18,7 @@ impl AdbTransports {
             .send_command(AdbCommand::Sync, false)
             .await?;
 
-        todo!("Implement sync_stat")
+        self.sync_stat_(path).await
     }
     async fn sync_stat_(&mut self, path: String) -> Result<StatInfo> {
         self.transports

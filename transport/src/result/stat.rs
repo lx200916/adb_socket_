@@ -10,7 +10,7 @@ const S_IFIFO: u32 = 0o010000;
 const S_ISUID: u32 = 0o004000;
 const S_ISGID: u32 = 0o002000;
 const S_ISVTX: u32 = 0o001000;
-#[repr(C)]
+#[repr(C,packed)]
 pub struct StatInfo {
     id: u32,
     mode: u32,

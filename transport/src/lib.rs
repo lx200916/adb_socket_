@@ -4,6 +4,7 @@ use transport::unix_stream_transport::UnixStreamTransport;
 mod commands;
 pub mod result;
 mod transport;
+mod utils;
 #[derive(thiserror::Error, Debug)]
 pub enum AdbTransportError {
     #[error("IO Error")]
@@ -14,6 +15,8 @@ pub enum AdbTransportError {
     InvalidResponse,
     #[error("Response Conversion Error: {0}")]
     ConversionError(String),
+    #[error("EOF")]
+    EOF
 }
 use std::array::TryFromSliceError;
 
