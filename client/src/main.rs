@@ -9,7 +9,7 @@ struct Arguments {
     #[clap(short, long)]
     pub serial: Option<String>,
     /// Unix socket to connect to server.
-    #[clap(short, long, default_value = "/var/run/adb.socket")]
+    #[clap( long, default_value = "/var/run/adb.sock")]
     pub socket: String,
     /// Use JSON output
     #[clap(long)]
