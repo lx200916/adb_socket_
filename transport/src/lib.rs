@@ -1,9 +1,9 @@
 use crate::transport::transport::AdbTransport;
 use anyhow::Ok;
-
+use transport::unix_stream_transport::UnixStreamTransport;
 mod commands;
+pub mod result;
 mod transport;
-mod result;
 #[derive(thiserror::Error, Debug)]
 pub enum AdbTransportError {
     #[error("IO Error")]
@@ -15,6 +15,14 @@ pub enum AdbTransportError {
     #[error("Response Conversion Error: {0}")]
     ConversionError(String),
 }
+use std::array::TryFromSliceError;
+
+impl From<TryFromSliceError> for AdbTransportError {
+    fn from(_: TryFromSliceError) -> Self {
+        AdbTransportError::InvalidResponse
+    }
+}
+// https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/adb/SERVICES.TXT
 pub enum AdbCommand {
     Version,
     Devices,
@@ -40,6 +48,8 @@ impl ToString for AdbCommand {
         }
     }
 }
+// https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/adb/SYNC.TXT
+// https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/adb/file_sync_protocol.h
 pub enum AdbSyncModeCommand {
     Send,
     Recv,
@@ -61,16 +71,15 @@ impl Into<Vec<u8>> for AdbSyncModeCommand {
         self.to_string().into_bytes()
     }
 }
-enum  AdbRespStatus {
+enum AdbRespStatus {
     Okay,
     Fail(String),
-
 }
 impl TryFrom<Vec<u8>> for AdbRespStatus {
     type Error = anyhow::Error;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        let status =  value.get(0..4).ok_or(AdbTransportError::InvalidResponse)?;
+        let status = value.get(0..4).ok_or(AdbTransportError::InvalidResponse)?;
         let status = std::str::from_utf8(status)?;
         match status {
             "OKAY" => Ok(AdbRespStatus::Okay),
@@ -78,26 +87,38 @@ impl TryFrom<Vec<u8>> for AdbRespStatus {
                 let length = value.get(4..8).ok_or(AdbTransportError::InvalidResponse)?;
                 let length = std::str::from_utf8(length)?;
                 let length = usize::from_str_radix(length, 16)?;
-                let message = value.get(8..length).ok_or(AdbTransportError::InvalidResponse)?;
+                let message = value
+                    .get(8..length)
+                    .ok_or(AdbTransportError::InvalidResponse)?;
                 let message = std::str::from_utf8(message)?;
                 Ok(AdbRespStatus::Fail(message.to_string()))
             }
             _ => Err(AdbTransportError::InvalidResponse.into()),
-        }        
+        }
     }
 }
-impl From<[u8;4]> for AdbRespStatus {
-    fn from(value: [u8;4]) -> Self {
-        let status =  String::from_utf8(value.to_vec()).unwrap().to_ascii_lowercase();
+impl From<[u8; 4]> for AdbRespStatus {
+    fn from(value: [u8; 4]) -> Self {
+        let status = String::from_utf8(value.to_vec())
+            .unwrap()
+            .to_ascii_lowercase();
         match status.as_str() {
             "okay" => AdbRespStatus::Okay,
             "fail" => AdbRespStatus::Fail(String::from("")),
             _ => AdbRespStatus::Fail(String::from("")),
         }
     }
-    
 }
-struct AdbTransports {
+pub struct AdbTransports {
     transports: Box<dyn AdbTransport>,
     json: bool,
+}
+impl AdbTransports {
+    pub async fn new(sockt: String, json: bool) -> anyhow::Result<Self> {
+        if !sockt.starts_with("/") {
+            anyhow::bail!("only Unix Socket is supported");
+        }
+        let transports = Box::new(UnixStreamTransport::new(sockt).await?);
+        Ok(Self { transports, json })
+    }
 }

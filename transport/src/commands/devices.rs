@@ -2,7 +2,7 @@ use crate::{AdbTransports, result::device::Devices, AdbTransportError};
 use anyhow::Result;
 use crate::result::device::Device;
 impl AdbTransports {
-    async fn devices(&mut self)->Result<Devices>{
+    pub async fn devices(&mut self)->Result<Devices>{
         let resp = self.transports.send_command(crate::AdbCommand::Devices, true).await?;
         if self.json{
             let resp = String::from_utf8(resp).map_err(|err|AdbTransportError::AdbError(err.to_string()))?;
@@ -17,7 +17,7 @@ impl AdbTransports {
             return Ok(Devices::Raw(String::from_utf8(resp).map_err(|err|AdbTransportError::AdbError(err.to_string()))?));
         }
     }
-    async fn devices_long(&mut self)->Result<Devices>{
+    pub async fn devices_long(&mut self)->Result<Devices>{
         let resp = self.transports.send_command(crate::AdbCommand::DevicesLong, true).await?;
         if self.json{
                     let resp = String::from_utf8(resp).map_err(|err|AdbTransportError::AdbError(err.to_string()))?;
@@ -32,7 +32,7 @@ impl AdbTransports {
             return Ok(Devices::Raw(String::from_utf8(resp).map_err(|err|AdbTransportError::AdbError(err.to_string()))?));
         }
     }
-    async fn track_device(&mut self,callback: impl Fn(Device))->Result<()>{
+    pub async fn track_device(&mut self,callback: impl Fn(Device))->Result<()>{
         
         self.transports.send_command(crate::AdbCommand::TrackDevices, true).await?;
         loop {
