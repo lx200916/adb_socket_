@@ -6,6 +6,7 @@ const SYNC_DATA_MAX: usize = 64 * 1024;
 const ID_DONE: u32 = u32::from_be_bytes([b'D', b'O', b'N', b'E']);
 const ID_DATA: u32 = u32::from_be_bytes([b'D', b'A', b'T', b'A']);
 impl AdbTransports {
+    #[async_backtrace::framed]
     pub async fn pull<S: ToString, A: AsRef<str>>(
         &mut self,
         serial: Option<S>,
@@ -23,6 +24,7 @@ impl AdbTransports {
         self.sync_recv(path.as_ref().to_string(), output).await?;
         Ok(())
     }
+    #[async_backtrace::framed]
     async fn sync_recv(&mut self, path: String, output: &mut dyn std::io::Write) -> Result<()> {
         if path.len() > 1024 {
             return Err(AdbTransportError::AdbError("Too long Path".into()).into());
@@ -50,8 +52,7 @@ impl AdbTransports {
         loop {
             self.transports
                 .read_exact_(&mut sync_msg_data)
-                .await
-                .map_err(|err| AdbTransportError::IoError(err))?;
+                .await?;
             let (id, size) = sync_msg_data.split_at(4);
             let id = u32::from_be_bytes(id.try_into().map_err(|err| {
                 AdbTransportError::AdbError(format!("Invalid Sync Message ID: {}", err))
@@ -72,11 +73,9 @@ impl AdbTransports {
             buffer.resize(size as usize, 0);
             self.transports
                 .read_exact_(&mut buffer)
-                .await
-                .map_err(|err| AdbTransportError::IoError(err))?;
+                .await?;
             output
-                .write_all(&buffer)
-                .map_err(|err| AdbTransportError::IoError(err))?;
+                .write_all(&buffer)?;
             bytes_copied += size;
         }
         Ok(())

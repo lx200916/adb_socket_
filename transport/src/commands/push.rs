@@ -6,17 +6,20 @@ const SYNC_DATA_MAX: usize = 64 * 1024;
 const ID_DONE: u32 = u32::from_be_bytes([b'D', b'O', b'N', b'E']);
 const ID_DATA: u32 = u32::from_be_bytes([b'D', b'A', b'T', b'A']);
 impl AdbTransports {
+    #[async_backtrace::framed]
     pub async fn push<S: ToString, A: AsRef<str>>(
         &mut self,
         serial: Option<S>,
         stream: &mut dyn Read,
         path: A,
     ) -> Result<()> {
+        
         let serial = match serial {
             Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
             None => AdbCommand::TransportAny,
         };
         self.transports.send_command(serial, false).await?;
+
         self.transports
             .send_command(AdbCommand::Sync, false)
             .await?;
@@ -76,7 +79,7 @@ impl AdbTransports {
                     .transports
                     .get_length()
                     .await
-                    .map_err(|_| AdbTransportError::InvalidResponse)?;
+                    .map_err(|err| AdbTransportError::InvalidResponse("sync_send".to_string(),Some(err.to_string())))?;
                 let mut message = vec![0u8; length];
                 self.transports.read_exact_(&mut message).await?;
                 let message = std::str::from_utf8(&message)?;

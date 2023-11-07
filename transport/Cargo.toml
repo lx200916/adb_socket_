@@ -10,4 +10,8 @@ tokio = { version = "1", features = ["macros","fs","net","io-util"] }
 anyhow = "1.0"
 thiserror = "1.0"
 async-trait = "0.1.74"
+async-backtrace ="0.2"
 nom = "6"
+bytes = "1"
+[dev-dependencies]
+tokio = { version = "1", features = ["macros","fs","net","io-util","rt-multi-thread"] }

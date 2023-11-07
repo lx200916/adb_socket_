@@ -1,32 +1,71 @@
-use crate::{AdbTransports,  AdbTransportError, AdbCommand};
-use anyhow::Result;
+use crate::utils::check_path;
+use crate::{AdbCommand, AdbTransportError, AdbTransports};
+use anyhow::{Ok, Result};
 impl AdbTransports {
-    pub async fn shell<S:ToString>(&mut self, serial: &Option<S>,cmd: String) -> Result<Vec<u8>> {
+    #[async_backtrace::framed]
+    pub async fn shell<S: ToString>(
+        &mut self,
+        serial: &Option<S>,
+        cmd: Vec<String>,
+        callback: impl Fn(String),
+    ) -> Result<()> {
         let serial = match serial {
             Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
             None => AdbCommand::TransportAny,
         };
+        let cmd = cmd
+            .into_iter()
+            .map(|str| str.replace(" ", "\\ "))
+            .collect::<Vec<String>>()
+            .join(" ");
         self.transports.send_command(serial, false).await?;
-        self.transports.send_command(AdbCommand::ShellExec(cmd), true).await
-      
+        println!("cmd {:?}", cmd.clone());
+
+        self.transports
+            .send_command(AdbCommand::ShellExec(cmd), false)
+            .await?;
+        let mut line = Vec::new();
+        loop {
+            let mut buffer = bytes::BytesMut::new();
+            let read = self.transports.read_buf_(&mut buffer).await?;
+            println!("read {}",read);
+            if read == 0 {
+                if !line.is_empty() {
+                    let lines: &str = std::str::from_utf8(&line)
+                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+                    callback(lines.to_string());
+                }
+                break;
+            }
+            while let Some(i) = buffer.iter().position(|&x| x == b'\n') {
+                line.extend_from_slice(&buffer.split_to(i+1));
+                let lines: &str = std::str::from_utf8(&line)
+                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+                callback(lines.to_string());
+
+                line.clear();
+            }
+        }
+
+        Ok(())
     }
-    pub async fn mkdir<S:ToString,A:AsRef<str>>(&mut self, serial: Option<S>,path: A) -> Result<Vec<u8>> {
+    #[async_backtrace::framed]
+    pub async fn mkdir<S: ToString, A: AsRef<str>>(
+        &mut self,
+        serial: Option<S>,
+        path: A,
+    ) -> Result<Vec<u8>> {
         let path = path.as_ref();
-        if path.len() > 1024 {
-            return Err(AdbTransportError::AdbError("Too long Path".into()).into());
-        }
-        if path.is_empty() {
-            return Err(AdbTransportError::AdbError("Path is empty".into()).into());
-        }
-        if path=="/" {
-            return Err(AdbTransportError::AdbError("Path illegal".into()).into());
-        }
+        let _ = check_path(path.to_string())?;
+
         let serial = match serial {
             Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
             None => AdbCommand::TransportAny,
         };
         self.transports.send_command(serial, false).await?;
-        let cmd = format!("mkdir {}",path);
-        self.transports.send_command(AdbCommand::ShellExec(cmd), true).await
+        let cmd = format!("mkdir {}", path);
+        self.transports
+            .send_command(AdbCommand::ShellExec(cmd), true)
+            .await
     }
 }

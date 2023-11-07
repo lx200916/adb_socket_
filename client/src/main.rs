@@ -68,9 +68,11 @@ async fn main() {
             }
         }
         SubCommand::Shell { command } => {
-            let command = command.join(" ");
-            let resp = adb.shell(&args.serial, command).await.unwrap();
-            println!("{}", String::from_utf8(resp).unwrap());
+            let callback = |str:String|{
+                println!("{}",str);
+            };
+             adb.shell(&args.serial, command,callback).await.unwrap();
+            
         }
         SubCommand::Push { filename, path } => {
             let path = Path::new(&path);

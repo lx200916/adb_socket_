@@ -5,15 +5,16 @@ mod commands;
 pub mod result;
 mod transport;
 mod utils;
+
 #[derive(thiserror::Error, Debug)]
 pub enum AdbTransportError {
-    #[error("IO Error")]
+    #[error("IO Error {0:?}")]
     IoError(std::io::Error),
-    #[error("Adb Transport Error: {0}")]
+    #[error("Adb Transport Error: {0:?}")]
     AdbError(String),
-    #[error("Invalid Response")]
-    InvalidResponse,
-    #[error("Response Conversion Error: {0}")]
+    #[error("Invalid Response @{0} :{1:?}")]
+    InvalidResponse(String, Option<String>),
+    #[error("Response Conversion Error: {0:?}")]
     ConversionError(String),
     #[error("EOF")]
     EOF
@@ -21,8 +22,8 @@ pub enum AdbTransportError {
 use std::array::TryFromSliceError;
 
 impl From<TryFromSliceError> for AdbTransportError {
-    fn from(_: TryFromSliceError) -> Self {
-        AdbTransportError::InvalidResponse
+    fn from(err: TryFromSliceError) -> Self {
+        AdbTransportError::InvalidResponse("TryFromSlice".to_string(),Some(err.to_string()))
     }
 }
 // https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/adb/SERVICES.TXT
@@ -78,33 +79,35 @@ enum AdbRespStatus {
     Okay,
     Fail(String),
 }
-impl TryFrom<Vec<u8>> for AdbRespStatus {
-    type Error = anyhow::Error;
+// impl TryFrom<Vec<u8>> for AdbRespStatus {
+//     type Error = anyhow::Error;
 
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        let status = value.get(0..4).ok_or(AdbTransportError::InvalidResponse)?;
-        let status = std::str::from_utf8(status)?;
-        match status {
-            "OKAY" => Ok(AdbRespStatus::Okay),
-            "FAIL" => {
-                let length = value.get(4..8).ok_or(AdbTransportError::InvalidResponse)?;
-                let length = std::str::from_utf8(length)?;
-                let length = usize::from_str_radix(length, 16)?;
-                let message = value
-                    .get(8..length)
-                    .ok_or(AdbTransportError::InvalidResponse)?;
-                let message = std::str::from_utf8(message)?;
-                Ok(AdbRespStatus::Fail(message.to_string()))
-            }
-            _ => Err(AdbTransportError::InvalidResponse.into()),
-        }
-    }
-}
+//     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+//         let status = value.get(0..4).ok_or(AdbTransportError::InvalidResponse)?;
+//         let status = std::str::from_utf8(status)?;
+//         match status {
+//             "OKAY" => Ok(AdbRespStatus::Okay),
+//             "FAIL" => {
+//                 let length = value.get(4..8).ok_or(AdbTransportError::InvalidResponse)?;
+//                 let length = std::str::from_utf8(length)?;
+//                 let length = usize::from_str_radix(length, 16)?;
+//                 let message = value
+//                     .get(8..length)
+//                     .ok_or(AdbTransportError::InvalidResponse)?;
+//                 let message = std::str::from_utf8(message)?;
+//                 Ok(AdbRespStatus::Fail(message.to_string()))
+//             }
+//             _ => Err(AdbTransportError::InvalidResponse.into()),
+//         }
+//     }
+// }
 impl From<[u8; 4]> for AdbRespStatus {
     fn from(value: [u8; 4]) -> Self {
         let status = String::from_utf8(value.to_vec())
             .unwrap()
             .to_ascii_lowercase();
+                // println!("{:?}", status);
+
         match status.as_str() {
             "okay" => AdbRespStatus::Okay,
             "fail" => AdbRespStatus::Fail(String::from("")),
