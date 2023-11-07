@@ -1,4 +1,4 @@
-use std::path::{self, Path};
+use std::{path::{self, Path}, str::Bytes};
 
 use clap::Parser;
 use transport::result::stat::FileType;
@@ -68,11 +68,10 @@ async fn main() {
             }
         }
         SubCommand::Shell { command } => {
-            let callback = |str:String|{
-                println!("{}",str);
+            let callback = |str:Vec<u8>|{
+                std::io::Write::write_all(&mut std::io::stdout(), &str).unwrap();
             };
-             adb.shell(&args.serial, command,callback).await.unwrap();
-            
+             adb.shell(&args.serial, command,callback).await.unwrap(); 
         }
         SubCommand::Push { filename, path } => {
             let path = Path::new(&path);

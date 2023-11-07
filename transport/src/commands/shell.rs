@@ -1,13 +1,14 @@
 use crate::utils::check_path;
 use crate::{AdbCommand, AdbTransportError, AdbTransports};
 use anyhow::{Ok, Result};
+use bytes::{buf, Bytes};
 impl AdbTransports {
     #[async_backtrace::framed]
     pub async fn shell<S: ToString>(
         &mut self,
         serial: &Option<S>,
         cmd: Vec<String>,
-        callback: impl Fn(String),
+        callback: impl Fn(Vec<u8>),
     ) -> Result<()> {
         let serial = match serial {
             Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
@@ -24,28 +25,35 @@ impl AdbTransports {
         self.transports
             .send_command(AdbCommand::ShellExec(cmd), false)
             .await?;
-        let mut line = Vec::new();
-        loop {
-            let mut buffer = bytes::BytesMut::new();
-            let read = self.transports.read_buf_(&mut buffer).await?;
-            println!("read {}",read);
+        let mut buffer = [0u8;100];
+        loop{
+            let read = self.transports.read_(&mut buffer).await?;
             if read == 0 {
-                if !line.is_empty() {
-                    let lines: &str = std::str::from_utf8(&line)
-                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-                    callback(lines.to_string());
-                }
                 break;
             }
-            while let Some(i) = buffer.iter().position(|&x| x == b'\n') {
-                line.extend_from_slice(&buffer.split_to(i+1));
-                let lines: &str = std::str::from_utf8(&line)
-                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-                callback(lines.to_string());
-
-                line.clear();
-            }
+            callback(buffer[..read].to_vec());
         }
+        // let mut line = Vec::new();
+        // let mut buffer = bytes::BytesMut::new();
+        // loop {
+        //     let read = self.transports.read_buf_(&mut buffer).await?;
+        //     // println!("read {}",read);
+        //     if read == 0 {
+        //         if !line.is_empty() {
+        //             let lines: &str = std::str::from_utf8(&line)
+        //                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        //             callback(lines.to_string());
+        //         }
+        //         break;
+        //     }
+        //     while let Some(i) = buffer.iter().position(|&x| x == b'\n') {
+        //         line.extend_from_slice(&buffer.split_to(i + 1));
+        //         let lines: &str = std::str::from_utf8(&line)
+        //             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        //         callback(lines.to_string());
+        //         line.clear();
+        //     }
+        // }
 
         Ok(())
     }
