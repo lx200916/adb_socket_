@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use crate::{AdbCommand, AdbTransportError, AdbTransports};
 use anyhow::Result;
 const SYNC_DATA_MAX: usize = 64 * 1024;
-const ID_DONE: u32 = u32::from_be_bytes([b'D', b'O', b'N', b'E']);
-const ID_DATA: u32 = u32::from_be_bytes([b'D', b'A', b'T', b'A']);
+const ID_DONE: u32 = u32::from_le_bytes([b'D', b'O', b'N', b'E']);
+const ID_DATA: u32 = u32::from_le_bytes([b'D', b'A', b'T', b'A']);
 impl AdbTransports {
     #[async_backtrace::framed]
     pub async fn pull<S: ToString, A: AsRef<str>>(
@@ -13,11 +13,9 @@ impl AdbTransports {
         path: A,
         output: &mut dyn std::io::Write,
     ) -> Result<()> {
-        let serial = match serial {
-            Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
-            None => AdbCommand::TransportAny,
-        };
-        self.transports.send_command(serial, false).await?;
+        self.new_connection().await?;
+        self.may_set_serial(serial).await?;
+
         self.transports
             .send_command(AdbCommand::Sync, false)
             .await?;
@@ -40,6 +38,7 @@ impl AdbTransports {
         self.transports
             .send_sync_command(crate::AdbSyncModeCommand::Recv)
             .await?;
+        
         let mut buf = Vec::new();
         let path_length = (path.len() as u32).to_le_bytes(); // Convert path_length to bytes
         buf.extend_from_slice(&path_length);
@@ -54,19 +53,20 @@ impl AdbTransports {
                 .read_exact_(&mut sync_msg_data)
                 .await?;
             let (id, size) = sync_msg_data.split_at(4);
-            let id = u32::from_be_bytes(id.try_into().map_err(|err| {
-                AdbTransportError::AdbError(format!("Invalid Sync Message ID: {}", err))
+            let id = u32::from_le_bytes(id.try_into().map_err(|err| {
+                AdbTransportError::AdbError(format!("Invalid Sync Message ID Error: {}", err))
             })?);
-            let size = u32::from_be_bytes(size.try_into().map_err(|err| {
-                AdbTransportError::AdbError(format!("Invalid Sync Message Size: {}", err))
+            let size = u32::from_le_bytes(size.try_into().map_err(|err| {
+                AdbTransportError::AdbError(format!("Invalid Sync Message Size Error: {}", err))
             })?);
-            if id == ID_DONE {
+            println!("id: {:?}, size: {:?}", std::str::from_utf8(&id.to_le_bytes()).unwrap_or("Invalid UTF-8"), size);
+            if id == ID_DONE ||size==0 {
                 break;
             }
             if id != ID_DATA {
                 return Err(AdbTransportError::AdbError(format!(
                     "Invalid Sync Message ID: {}",
-                    id
+                    std::str::from_utf8(&id.to_be_bytes()).unwrap_or("Invalid UTF-8")
                 ))
                 .into());
             }

@@ -16,6 +16,6 @@ pub trait AdbTransport {
     async fn read_exact_(&mut self, buffer: &mut [u8]) -> Result<(), AdbTransportError>;
     async fn read_(&mut self, buffer: &mut [u8]) -> Result<usize, AdbTransportError>;
     async fn read_buf_(&mut self, buffer: &mut BytesMut) -> Result<usize, AdbTransportError>;
-
+    async fn read_to_end(&mut self) -> Result<Vec<u8>>;
     async fn write_all(&mut self, data: &[u8]) -> Result<()>;
 }

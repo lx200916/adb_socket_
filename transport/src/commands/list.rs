@@ -13,12 +13,7 @@ impl AdbTransports {
     ) -> Result<Vec<SyncDent>> {
         //check path
         let _ = check_path(path.clone())?;
-
-        let transport_ = match serial {
-            Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
-            None => AdbCommand::TransportAny,
-        };
-        self.transports.send_command(transport_, false).await?;
+        self.may_set_serial(serial).await?;
         self.transports
             .send_command(AdbCommand::Sync, false)
             .await?;

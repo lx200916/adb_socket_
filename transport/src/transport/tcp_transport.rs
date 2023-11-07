@@ -1,6 +1,6 @@
 use std::{
     path::{Path, PathBuf},
-    vec,
+    vec, net::Ipv4Addr,
 };
 
 use crate::{AdbCommand, AdbRespStatus, AdbSyncModeCommand, AdbTransportError};
@@ -10,14 +10,15 @@ use bytes::{BufMut, BytesMut};
 use nom::AsBytes;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::UnixStream,
+    net::TcpStream,
 };
 
 use super::transport::AdbTransport;
 
 pub struct UnixStreamTransport {
-    pub(crate) stream: UnixStream,
-    pub(crate) addr: PathBuf,
+    pub(crate) stream: TcpStream,
+    pub(crate) addr: Ipv4Addr,
+    pub(crate) port: u16
 }
 #[async_trait]
 impl AdbTransport for UnixStreamTransport {
@@ -39,7 +40,7 @@ impl AdbTransport for UnixStreamTransport {
             .map_err(|err| AdbTransportError::IoError(err))
     }
     async fn reconnect(&mut self) -> Result<()> {
-        self.stream = UnixStream::connect(&self.addr).await?;
+        self.stream = TcpStream::connect((self.addr,self.port)).await?;
         Ok(())
     }
     #[async_backtrace::framed]

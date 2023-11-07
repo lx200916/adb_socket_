@@ -17,13 +17,13 @@ pub enum AdbTransportError {
     #[error("Response Conversion Error: {0:?}")]
     ConversionError(String),
     #[error("EOF")]
-    EOF
+    EOF,
 }
 use std::array::TryFromSliceError;
 
 impl From<TryFromSliceError> for AdbTransportError {
     fn from(err: TryFromSliceError) -> Self {
-        AdbTransportError::InvalidResponse("TryFromSlice".to_string(),Some(err.to_string()))
+        AdbTransportError::InvalidResponse("TryFromSlice".to_string(), Some(err.to_string()))
     }
 }
 // https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/adb/SERVICES.TXT
@@ -106,7 +106,7 @@ impl From<[u8; 4]> for AdbRespStatus {
         let status = String::from_utf8(value.to_vec())
             .unwrap()
             .to_ascii_lowercase();
-                // println!("{:?}", status);
+        println!("{:?}", status);
 
         match status.as_str() {
             "okay" => AdbRespStatus::Okay,
@@ -116,6 +116,7 @@ impl From<[u8; 4]> for AdbRespStatus {
     }
 }
 pub struct AdbTransports {
+    serial_set: bool,
     transports: Box<dyn AdbTransport>,
     json: bool,
 }
@@ -125,6 +126,26 @@ impl AdbTransports {
             anyhow::bail!("only Unix Socket is supported");
         }
         let transports = Box::new(UnixStreamTransport::new(sockt).await?);
-        Ok(Self { transports, json })
+        Ok(Self {
+            transports,
+            json,
+            serial_set: false,
+        })
+    }
+    pub async fn may_set_serial<S: ToString>(&mut self, serial: Option<S>) -> anyhow::Result<()> {
+        if !self.serial_set {
+            let transport_ = match serial {
+                Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
+                None => AdbCommand::TransportAny,
+            };
+            self.transports.send_command(transport_, false).await?;
+            self.serial_set = true;
+        }
+        Ok(())
+    }
+    pub async fn new_connection(&mut self)->anyhow::Result<()>{
+        self.transports.reconnect().await?;
+        self.serial_set = false;
+        Ok(())
     }
 }

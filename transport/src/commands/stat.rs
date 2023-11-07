@@ -10,12 +10,8 @@ impl AdbTransports {
         path: String,
         serial: Option<S>,
     ) -> Result<StatInfo> {
-        
-        let transport_ = match serial {
-            Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
-            None => AdbCommand::TransportAny,
-        };
-        self.transports.send_command(transport_, false).await?;
+        self.may_set_serial(serial).await?;
+
         self.transports
             .send_command(AdbCommand::Sync, false)
             .await?;
@@ -36,4 +32,3 @@ impl AdbTransports {
         Ok(msg)
     }
 }
-

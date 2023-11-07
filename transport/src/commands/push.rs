@@ -13,12 +13,9 @@ impl AdbTransports {
         stream: &mut dyn Read,
         path: A,
     ) -> Result<()> {
-        
-        let serial = match serial {
-            Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
-            None => AdbCommand::TransportAny,
-        };
-        self.transports.send_command(serial, false).await?;
+        self.new_connection().await?;
+        self.may_set_serial(serial).await?;
+
 
         self.transports
             .send_command(AdbCommand::Sync, false)
@@ -38,7 +35,7 @@ impl AdbTransports {
         if path.is_empty() {
             return Err(AdbTransportError::AdbError("Path is empty".into()).into());
         }
-
+        
         //TODO: Recv-2 Feature.
         self.transports
             .send_sync_command(crate::AdbSyncModeCommand::Send)

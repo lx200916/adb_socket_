@@ -6,21 +6,18 @@ impl AdbTransports {
     #[async_backtrace::framed]
     pub async fn shell<S: ToString>(
         &mut self,
-        serial: &Option<S>,
+        serial: Option<S>,
         cmd: Vec<String>,
         callback: impl Fn(Vec<u8>),
     ) -> Result<()> {
-        let serial = match serial {
-            Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
-            None => AdbCommand::TransportAny,
-        };
+        self.may_set_serial(serial).await?;
+
         let cmd = cmd
             .into_iter()
             .map(|str| str.replace(" ", "\\ "))
             .collect::<Vec<String>>()
             .join(" ");
-        self.transports.send_command(serial, false).await?;
-        println!("cmd {:?}", cmd.clone());
+        // println!("cmd {:?}", cmd.clone());
 
         self.transports
             .send_command(AdbCommand::ShellExec(cmd), false)
@@ -64,16 +61,17 @@ impl AdbTransports {
         path: A,
     ) -> Result<Vec<u8>> {
         let path = path.as_ref();
-        let _ = check_path(path.to_string())?;
+        let res_ = check_path(path.to_string())?;
+        if !res_{
+            return Err(anyhow::anyhow!("Path is not allowed"));
+        }
 
-        let serial = match serial {
-            Some(serial) => AdbCommand::TransportSerial(serial.to_string()),
-            None => AdbCommand::TransportAny,
-        };
-        self.transports.send_command(serial, false).await?;
+        self.may_set_serial(serial).await?;
+
         let cmd = format!("mkdir {}", path);
         self.transports
-            .send_command(AdbCommand::ShellExec(cmd), true)
+            .send_command(AdbCommand::ShellExec(cmd), false)
             .await
+        
     }
 }
