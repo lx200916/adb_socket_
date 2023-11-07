@@ -119,7 +119,7 @@ impl UnixStreamTransport {
     pub async fn send_request_(&mut self, command: AdbCommand) -> Result<()> {
 
         let command_string = command.to_string();
-        println!("command_string: {:?}", command_string);
+        // println!("command_string: {:?}", command_string);
         let command_string = format!("{:04x}{}", command_string.len(), command_string);
         self.stream.write_all(command_string.as_bytes()).await?;
         let mut resp_status = [0u8; 4];

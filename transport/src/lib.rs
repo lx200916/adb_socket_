@@ -106,7 +106,7 @@ impl From<[u8; 4]> for AdbRespStatus {
         let status = String::from_utf8(value.to_vec())
             .unwrap()
             .to_ascii_lowercase();
-        println!("{:?}", status);
+        // println!("{:?}", status);
 
         match status.as_str() {
             "okay" => AdbRespStatus::Okay,

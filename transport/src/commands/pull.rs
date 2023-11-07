@@ -59,7 +59,7 @@ impl AdbTransports {
             let size = u32::from_le_bytes(size.try_into().map_err(|err| {
                 AdbTransportError::AdbError(format!("Invalid Sync Message Size Error: {}", err))
             })?);
-            println!("id: {:?}, size: {:?}", std::str::from_utf8(&id.to_le_bytes()).unwrap_or("Invalid UTF-8"), size);
+            // println!("id: {:?}, size: {:?}", std::str::from_utf8(&id.to_le_bytes()).unwrap_or("Invalid UTF-8"), size);
             if id == ID_DONE ||size==0 {
                 break;
             }

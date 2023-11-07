@@ -126,7 +126,7 @@ async fn main() {
                     } else if path.is_dir() {
                         let filename_ = path.strip_prefix(base).unwrap();
                         let filename_ = filename.join(filename_);
-                        println!("mkdir {}", filename_.to_str().unwrap());
+                        // println!("mkdir {}", filename_.to_str().unwrap());
 
                         // adb.mkdir(args.serial.clone(), filename.to_str().unwrap())
                         //     .await

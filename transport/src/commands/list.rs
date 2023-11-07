@@ -28,7 +28,7 @@ impl AdbTransports {
         let path_length = (path.len() as u32).to_le_bytes(); // Convert path_length to bytes
         buf.extend_from_slice(&path_length);
         buf.extend_from_slice(path.as_bytes());
-        println!("buf {:?}",buf);
+        // println!("buf {:?}",buf);
         self.transports.write_all(&buf).await?;
         let mut dents: Vec<SyncDent> = Vec::new();
         loop {
