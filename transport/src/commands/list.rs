@@ -14,10 +14,7 @@ impl AdbTransports {
         //check path
         let _ = check_path(path.clone())?;
         self.may_set_serial(serial).await?;
-        self.transports
-            .send_command(AdbCommand::Sync, false)
-            .await?;
-
+        self.may_set_sync().await?;
         self.sync_list_(path).await
     }
     #[async_backtrace::framed]
@@ -43,6 +40,7 @@ impl AdbTransports {
                 }
             }
         }
+        self.new_connection().await?;
         Ok(dents)
     }
 }

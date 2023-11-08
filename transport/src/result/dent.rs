@@ -19,10 +19,10 @@ impl SyncDent {
     pub async fn from_le_bytes_transport(
         transport: &mut dyn AdbTransport,
     ) -> Result<Self, AdbTransportError> {
-
         let stat = String::from_utf8(transport.read_exact(4).await?).map_err(|err| {
             AdbTransportError::InvalidResponse("sync_dent".to_string(), Some(err.to_string()))
         })?;
+        // println!("stat: {}", stat);
         match stat.as_str() {
             "DENT" => {}
             "FAIL" => {

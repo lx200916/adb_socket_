@@ -4,6 +4,7 @@ use crate::{transport::transport::AdbTransport, AdbTransportError};
 pub fn check_path<S:ToString>(path:S)->Result<bool>{
     let path = path.to_string();
     if path.len() > 1024 {
+        println!("path too long: {}", path);
         return Err(anyhow::anyhow!("Path too long"));
     }
     if path.is_empty() {

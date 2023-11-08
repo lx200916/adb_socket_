@@ -87,7 +87,12 @@ impl StatInfo {
         
     }
     pub fn get_file_type(&self) -> FileType {
-        match self.mode & S_IFMT {
+      FileType::from(self.mode)
+    }
+}
+impl From<u32> for FileType {
+    fn from(value: u32) -> Self {
+         match value & S_IFMT {
             S_IFSOCK => FileType::Socket,
             S_IFLNK => FileType::Link,
             S_IFREG => FileType::File,

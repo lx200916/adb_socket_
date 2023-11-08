@@ -59,6 +59,7 @@ impl AdbTransport for UnixStreamTransport {
         &mut self,
         command: AdbSyncModeCommand,
     ) -> Result<(), AdbTransportError> {
+        // println!("sync command {}",command.to_string());
         self.stream
             .write_all(command.to_string().as_bytes())
             .await

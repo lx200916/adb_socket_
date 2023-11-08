@@ -119,6 +119,7 @@ pub struct AdbTransports {
     serial_set: bool,
     transports: Box<dyn AdbTransport>,
     json: bool,
+    is_sync: bool,
 }
 impl AdbTransports {
     pub async fn new(sockt: String, json: bool) -> anyhow::Result<Self> {
@@ -130,6 +131,7 @@ impl AdbTransports {
             transports,
             json,
             serial_set: false,
+            is_sync: false,
         })
     }
     pub async fn may_set_serial<S: ToString>(&mut self, serial: Option<S>) -> anyhow::Result<()> {
@@ -143,9 +145,19 @@ impl AdbTransports {
         }
         Ok(())
     }
-    pub async fn new_connection(&mut self)->anyhow::Result<()>{
+    pub async fn may_set_sync(&mut self) -> anyhow::Result<()> {
+        if !self.is_sync {
+            self.transports
+                .send_command(AdbCommand::Sync, false)
+                .await?;
+            self.is_sync = true;
+        }
+        Ok(())
+    }
+    pub async fn new_connection(&mut self) -> anyhow::Result<()> {
         self.transports.reconnect().await?;
         self.serial_set = false;
+        self.is_sync = false;
         Ok(())
     }
 }

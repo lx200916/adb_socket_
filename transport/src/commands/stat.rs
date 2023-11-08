@@ -10,11 +10,9 @@ impl AdbTransports {
         path: String,
         serial: Option<S>,
     ) -> Result<StatInfo> {
+        // self.new_connection().await?;
         self.may_set_serial(serial).await?;
-
-        self.transports
-            .send_command(AdbCommand::Sync, false)
-            .await?;
+        self.may_set_sync().await?;
 
         self.sync_stat_(path).await
     }
