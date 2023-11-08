@@ -30,12 +30,18 @@ pub enum SubCommand {
         /// Command to run
         command: Vec<String>,
     },
+    /// Push a file to a device
     Push {
+        /// Local path to file
         path: String,
+        /// Remote path to file
         filename: String,
     },
+    /// Pull a file from a device
     Pull {
+        /// Remote path to file
         path: String,
+        /// Local path to file
         filename: String,
     },
 }
