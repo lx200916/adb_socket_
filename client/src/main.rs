@@ -1,7 +1,9 @@
 use anyhow::Result;
 use clap::Parser;
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use transport::{result::stat::FileType, AdbTransports};
+use transport::result::device::Devices;
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Arguments {
@@ -45,6 +47,7 @@ pub enum SubCommand {
         filename: String,
     },
 }
+
 #[derive(Debug, Clone)]
 struct FileItem {
     remote_file: PathBuf,
@@ -63,15 +66,17 @@ async fn main() {
             } else {
                 adb.devices().await.unwrap()
             };
-            println!("List of devices attached");
+            
 
             match devices {
-                transport::result::device::Devices::Devices(devices) => {
-                    devices.iter().for_each(|device| {
-                        println!("{:?}", device);
-                    });
+                Devices::Devices(devices) => {
+                    // devices.iter().for_each(|device| {
+                    //     println!("{:?}", device);
+                    // });
+                    print!("{}", serde_json::to_string(&devices).unwrap());
                 }
-                transport::result::device::Devices::Raw(raw) => {
+                Devices::Raw(raw) => {
+                    println!("List of devices attached");
                     println!("{}", raw);
                 }
             }

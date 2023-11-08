@@ -13,5 +13,7 @@ async-trait = "0.1.74"
 async-backtrace ="0.2"
 nom = "6"
 bytes = "1"
+serde = { version = "1", features = ["derive"] }
+
 [dev-dependencies]
 tokio = { version = "1", features = ["macros","fs","net","io-util","rt-multi-thread"] }

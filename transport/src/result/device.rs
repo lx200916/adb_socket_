@@ -11,13 +11,14 @@ use nom::{
     IResult, branch::alt, Parser,
 };
 use nom::combinator::not;
+use serde::Serialize;
 
-
+#[derive(Debug)]
 pub enum Devices {
     Devices(Vec<Device>),
     Raw(String),
 }
-#[derive(Debug, PartialEq,)]
+#[derive(Debug, PartialEq,Serialize)]
 pub enum DeviceState {
     Connecting,   // Haven't received a response from the device yet.
     Authorizing,  // Authorizing with keys from ADB_VENDOR_KEYS.
@@ -87,7 +88,7 @@ impl ToString for DeviceState {
     }
     
 }
-#[derive(Debug)]
+#[derive(Debug,Serialize)]
 pub struct Device {
     pub serial: String,
     pub state: DeviceState,
