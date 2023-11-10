@@ -13,9 +13,9 @@ impl AdbTransports {
         self.may_set_serial(serial).await?;
 
         let cmd = cmd
-            .into_iter()
-            .map(|str| str.replace(" ", "\\ "))
-            .collect::<Vec<String>>()
+        //     .into_iter()
+        //     .map(|str| str.replace(" ", "\\ "))
+        //     .collect::<Vec<String>>()
             .join(" ");
         // println!("cmd {:?}", cmd.clone());
 
