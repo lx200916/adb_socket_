@@ -15,13 +15,13 @@ use tokio::{
 
 use super::transport::AdbTransport;
 
-pub struct UnixStreamTransport {
+pub struct TcpStreamTransport {
     pub(crate) stream: TcpStream,
     pub(crate) addr: Ipv4Addr,
     pub(crate) port: u16
 }
 #[async_trait]
-impl AdbTransport for UnixStreamTransport {
+impl AdbTransport for TcpStreamTransport {
     async fn read_to_end(&mut self) -> Result<Vec<u8>> {
         let mut buffer = vec![];
         self.stream.read_to_end(&mut buffer).await?;
@@ -110,11 +110,19 @@ impl AdbTransport for UnixStreamTransport {
         Ok(())
     }
 }
-impl UnixStreamTransport {
+impl TcpStreamTransport {
     pub async fn new(addr: String) -> Result<Self> {
-        let addr: PathBuf = Path::new(&addr).to_path_buf();
-        let stream = UnixStream::connect(addr.clone()).await?;
-        Ok(Self { stream, addr })
+        let (addr,port) = if let Some(index) = addr.find(':') {
+            let port = addr[index+1..].parse::<u16>()?;
+            let addr = addr[..index].to_string();
+            (addr,port)
+        }else{
+            (addr,5035)
+        };
+        let addr = addr.parse::<Ipv4Addr>()?;
+        
+        let stream = TcpStream::connect((addr,port)).await?;
+        Ok(Self { stream, addr ,port})
     }
     pub async fn send_request_(&mut self, command: AdbCommand) -> Result<()> {
 

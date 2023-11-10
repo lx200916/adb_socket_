@@ -122,11 +122,20 @@ pub struct AdbTransports {
     is_sync: bool,
 }
 impl AdbTransports {
-    pub async fn new(sockt: String, json: bool) -> anyhow::Result<Self> {
-        if !sockt.starts_with("/") {
-            anyhow::bail!("only Unix Socket is supported");
-        }
-        let transports = Box::new(UnixStreamTransport::new(sockt).await?);
+    pub async fn new(addr: String, json: bool) -> anyhow::Result<Self> {
+        let transports: Box<dyn AdbTransport> = match addr {
+            addr if addr.starts_with("tcp:") => {
+                let addr = addr.trim_start_matches("tcp:");
+                Box::new(transport::tcp_transport::TcpStreamTransport::new(addr.to_string()).await?)
+            }
+            addr if (addr.starts_with("/") || addr.starts_with("./")) => Box::new(
+                transport::unix_stream_transport::UnixStreamTransport::new(addr.to_string())
+                    .await?,
+            ),
+            _ => {
+                Box::new(transport::tcp_transport::TcpStreamTransport::new(addr.to_string()).await?)
+            }
+        };
         Ok(Self {
             transports,
             json,
